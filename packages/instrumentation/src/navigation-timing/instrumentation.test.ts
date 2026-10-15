@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { hrTime } from '@opentelemetry/core';
 import type { InMemoryLogRecordExporter } from '@opentelemetry/sdk-logs';
 import {
   afterEach,
@@ -103,6 +104,43 @@ describe('NavigationTimingInstrumentation', () => {
       }
     };
   };
+
+  it.each(['load', 'retries'])(
+    'should preserve the navigation start time after waiting for %s',
+    (wait) => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      let now = 100;
+      vi.spyOn(performance, 'now').mockImplementation(() => now);
+      setReadyState(wait === 'load' ? 'loading' : 'complete');
+      const entry = {
+        name: 'https://example.test/',
+        entryType: 'navigation',
+        startTime: 0,
+        duration: 1,
+        type: 'navigate',
+        loadEventEnd: 0,
+      };
+      getEntriesByTypeSpy.mockReturnValue([entry]);
+      instrumentation.enable();
+      expect(getNavigationTimingLogs()).toHaveLength(0);
+      now = 5000;
+
+      if (wait === 'load') {
+        entry.loadEventEnd = 456;
+        setReadyState('complete');
+        window.dispatchEvent(new Event('load'));
+      } else {
+        vi.runOnlyPendingTimers();
+        expect(getNavigationTimingLogs()).toHaveLength(0);
+        entry.loadEventEnd = 456;
+        vi.runOnlyPendingTimers();
+      }
+
+      const logs = getNavigationTimingLogs();
+      expect(logs).toHaveLength(1);
+      expect(logs[0]?.hrTime).toEqual(hrTime(0));
+    },
+  );
 
   it('should emit immediately when the navigation entry is complete', () => {
     setReadyState('complete');
