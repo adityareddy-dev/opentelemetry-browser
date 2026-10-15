@@ -191,7 +191,7 @@ Compatible with OpenTelemetry JS API and SDK `1.0+`.
 
 #### Configuration
 
-By default the instrumentation captures `click` events. Middle clicks are captured through `auxclick` and right clicks through `contextmenu`, since native context menus can consume the mouse release before `auxclick` fires. Only button 2 context menus are recorded, so keyboard menu events are ignored. Right-button `auxclick` events are ignored to avoid duplicate records. You can configure which events to capture by passing an options object:
+By default the instrumentation captures `click` events. Middle clicks are captured through `auxclick` and right clicks through `contextmenu`, since native context menus can consume the mouse release before `auxclick` fires. Context menus are recorded for button 2 and for button 0 with Ctrl held (macOS Ctrl+click). Other context menu events, including keyboard menu events without Ctrl, are ignored. The reported button matches the mouse event. Right-button `auxclick` events are ignored to avoid duplicate records. You can configure which events to capture by passing an options object:
 
 ```typescript
 new UserActionInstrumentation({

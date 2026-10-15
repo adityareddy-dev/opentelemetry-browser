@@ -114,6 +114,27 @@ describe('UserActionInstrumentation', () => {
     },
   );
 
+  it('records the macOS Ctrl+click context menu exactly once', () => {
+    const element = createTestElement();
+    for (const type of ['mousedown', 'contextmenu', 'auxclick']) {
+      element.dispatchEvent(
+        new MouseEvent(type, {
+          button: 0,
+          ctrlKey: true,
+          bubbles: true,
+          clientX: 100,
+          clientY: 150,
+        }),
+      );
+    }
+    const logs = inMemoryExporter.getFinishedLogRecords();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.eventName).toBe('browser.user_action.click');
+    expect(logs[0]?.attributes['browser.mouse_event.button']).toBe('left');
+    expect(logs[0]?.attributes['browser.page.x']).toBe(100);
+    expect(logs[0]?.attributes['browser.page.y']).toBe(150);
+  });
+
   it('ignores keyboard context menus and non-right contextmenu events', () => {
     const element = createTestElement();
     for (const button of [0, 1, 3, 4]) {

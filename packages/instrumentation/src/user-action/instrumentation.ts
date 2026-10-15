@@ -66,7 +66,9 @@ export class UserActionInstrumentation extends InstrumentationBase<UserActionIns
     if (
       (event.type === 'click' && event.button !== 0) ||
       (event.type === 'auxclick' && event.button !== 1) ||
-      (event.type === 'contextmenu' && event.button !== 2)
+      (event.type === 'contextmenu' &&
+        event.button !== 2 &&
+        !(event.button === 0 && event.ctrlKey))
     ) {
       return;
     }
