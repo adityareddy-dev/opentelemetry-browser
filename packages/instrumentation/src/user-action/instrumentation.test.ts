@@ -46,7 +46,7 @@ describe('UserActionInstrumentation', () => {
   };
 
   const dispatchMouseDownEvent = (
-    element: HTMLElement,
+    element: Element,
     button: number,
     type: 'click' | 'auxclick' | 'contextmenu' = 'click',
   ) => {
@@ -133,7 +133,44 @@ describe('UserActionInstrumentation', () => {
     expect(logs.length).toBe(0);
   });
 
-  it('should not emit a log when the event target is not an HTMLElement', () => {
+  it.each([
+    ['click', 0, 'left'],
+    ['auxclick', 1, 'middle'],
+    ['contextmenu', 2, 'right'],
+  ] as const)(
+    'should capture %s on an SVG path inside a button',
+    (type, mouseButton, buttonName) => {
+      const button = document.createElement('button');
+      button.id = 'icon-button';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const path = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'path',
+      );
+      path.setAttribute('data-otel-icon', 'search');
+      svg.appendChild(path);
+      button.appendChild(svg);
+      document.body.appendChild(button);
+
+      dispatchMouseDownEvent(path, mouseButton, type);
+
+      const logs = inMemoryExporter.getFinishedLogRecords();
+      expect(logs).toHaveLength(1);
+      expect(logs[0]?.eventName).toBe('browser.user_action.click');
+      expect(logs[0]?.attributes['browser.tag_name']).toBe('path');
+      expect(logs[0]?.attributes['browser.mouse_event.button']).toBe(
+        buttonName,
+      );
+      expect(logs[0]?.attributes['browser.css_selector']).toBe(
+        '#icon-button > svg > path',
+      );
+      expect(logs[0]?.attributes['browser.element.attributes']).toEqual({
+        icon: 'search',
+      });
+    },
+  );
+
+  it('should not emit a log when the event target is not an Element', () => {
     const textNode = document.createTextNode('Test Text Node');
     document.body.appendChild(textNode);
 
