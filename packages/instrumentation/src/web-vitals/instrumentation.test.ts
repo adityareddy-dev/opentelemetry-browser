@@ -36,6 +36,7 @@ import {
 const webVitalsMock = vi.hoisted(() => ({
   failing: undefined as string | undefined,
   calls: [] as string[],
+  options: [] as unknown[],
 }));
 
 vi.mock('web-vitals/attribution', async (importOriginal) => {
@@ -48,6 +49,7 @@ vi.mock('web-vitals/attribution', async (importOriginal) => {
     ) =>
     (...args: Args) => {
       webVitalsMock.calls.push(name);
+      webVitalsMock.options.push(args[1]);
       if (webVitalsMock.failing === name) {
         throw new Error(`${name} subscribe failed`);
       }
@@ -371,6 +373,29 @@ describe('WebVitalsInstrumentation', () => {
 
       expect(webVitalsMock.calls).toHaveLength(5);
     });
+  });
+
+  describe('reportAllChanges', () => {
+    it.each([undefined, false, true])(
+      'should pass %s to every subscriber, defaulting to false',
+      (reportAllChanges) => {
+        webVitalsMock.options.length = 0;
+        instrumentation = new WebVitalsInstrumentation({ reportAllChanges });
+        expect(webVitalsMock.options).toEqual([]);
+
+        enableForTest(instrumentation);
+
+        expect(webVitalsMock.options).toEqual(
+          Array.from({ length: 5 }, () => ({
+            reportAllChanges: reportAllChanges ?? false,
+          })),
+        );
+
+        instrumentation.disable();
+        instrumentation.enable();
+        expect(webVitalsMock.options).toHaveLength(5);
+      },
+    );
   });
 
   describe('applyCustomLogRecordData hook', () => {
