@@ -5,8 +5,8 @@ This guide covers moving browser telemetry from `opentelemetry-js` and
 instrumentation while keeping your existing SDK setup. Other migrations change
 the telemetry signal or have gaps that need an application-specific decision.
 
-The APIs below match `@opentelemetry/browser-instrumentation` 0.8.2 and
-`@opentelemetry/browser-sdk` 0.5.0 in this repository. Both packages are
+The APIs below match `@opentelemetry/browser-instrumentation` 0.9.0 and
+`@opentelemetry/browser-sdk` 0.6.0 in this repository. Both packages are
 experimental. The fetch and XHR comparisons use the legacy packages at 0.223.0;
 check your installed versions before applying the behavior tables to older
 releases. The overall consolidation is tracked in [#209][consolidation].
@@ -83,7 +83,7 @@ was `GlobalErrorsInstrumentationConfig`.
 | Previous package | Current migration path |
 | --- | --- |
 | `@opentelemetry/instrumentation-document-load` | [Navigation, navigation-timing, and resource-timing events](#document-load-timing-and-trace-gaps) expose related data. They do not recreate the `documentLoad` span hierarchy. Keep the legacy instrumentation if that hierarchy is required; [#327][document-load-decision] tracks the remaining design decisions. |
-| `@opentelemetry/instrumentation-user-interaction` | `UserActionInstrumentation` from `@opentelemetry/browser-instrumentation/experimental/user-action` captures clicks as log events. It does not replace the old interaction spans, arbitrary `eventNames`, or their context propagation. See [user interactions](#user-interactions). |
+| `@opentelemetry/instrumentation-user-interaction` | `UserActionInstrumentation` from `@opentelemetry/browser-instrumentation/experimental/user-action` captures clicks as log events, including middle clicks and right-button context menus from 0.9.0. It does not replace the old interaction spans, arbitrary `eventNames`, or their context propagation. See [user interactions](#user-interactions). |
 | `@opentelemetry/instrumentation-long-task` | There is no shipped long-task replacement in the current package exports. `WebVitalsInstrumentation` at `@opentelemetry/browser-instrumentation/experimental/web-vitals` emits Web Vitals events, which do not replace individual long-task spans. Follow [#209][consolidation] for this migration. |
 | `@opentelemetry/plugin-react-load` | Deprecated and removed from contrib, with no replacement here. See the [removal decision][react-load-removal]. Component-load spans require a separately chosen instrumentation approach. |
 | `@opentelemetry/auto-instrumentations-web` | There is no `getWebAutoInstrumentations()` export in this repository. Construct an explicit instrumentation array. The legacy helper enables document-load, fetch, user-interaction, and XHR; decide how to migrate each of those before removing it. |
@@ -99,10 +99,11 @@ was `GlobalErrorsInstrumentationConfig`.
 
 ## Migrate fetch and XHR first
 
-These examples use `@opentelemetry/browser-sdk` 0.5.0 and
-`@opentelemetry/browser-instrumentation` 0.8.2, which still require the 2.x SDK
-and 0.223.x experimental packages. Keep that dependency graph until Browser
-releases support SDK 3.0 and experimental 0.300.x packages.
+These examples use `@opentelemetry/browser-sdk` 0.6.0 and
+`@opentelemetry/browser-instrumentation` 0.9.0. Both still depend on 0.223.x
+experimental packages, and the Browser SDK also requires the 2.x SDK. Keep that
+dependency graph until Browser releases support SDK 3.0 and experimental 0.300.x
+packages.
 
 Install the new instrumentation package, keeping the SDK and registration
 dependencies your application already uses:
@@ -270,8 +271,11 @@ and `@opentelemetry/browser-instrumentation/errors`.
 The old `UserInteractionInstrumentation` creates spans and accepts arbitrary DOM
 `eventNames` plus `shouldPreventSpanCreation`. The new
 `UserActionInstrumentation` emits `browser.user_action.click` log events.
-`autoCapturedActions` currently accepts only `'click'`; an empty array disables
-automatic capture. `applyCustomLogRecordData` can customize emitted records.
+From 0.9.0 these also cover middle clicks (`auxclick`) and right-button context
+menus (`contextmenu`), with `browser.mouse_event.button` set to `middle` or
+`right`. `autoCapturedActions` currently accepts only `'click'`, which covers
+all three buttons; an empty array disables automatic capture.
+`applyCustomLogRecordData` can customize emitted records.
 
 This is a change in the observability model. It does not create an interaction
 span to parent downstream requests, and it has no equivalent to the old
@@ -325,10 +329,11 @@ If you choose to move SDK initialization, replace the existing provider startup
 with a single Browser SDK setup; do not initialize a second global provider for
 the same signal.
 
-These examples use `@opentelemetry/browser-sdk` 0.5.0 and
-`@opentelemetry/browser-instrumentation` 0.8.2, which still require the 2.x SDK
-and 0.223.x experimental packages. Keep that dependency graph until Browser
-releases support SDK 3.0 and experimental 0.300.x packages.
+These examples use `@opentelemetry/browser-sdk` 0.6.0 and
+`@opentelemetry/browser-instrumentation` 0.9.0. Both still depend on 0.223.x
+experimental packages, and the Browser SDK also requires the 2.x SDK. Keep that
+dependency graph until Browser releases support SDK 3.0 and experimental 0.300.x
+packages.
 
 Install the SDK and the API peer dependency:
 
