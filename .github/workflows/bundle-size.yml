@@ -33,14 +33,14 @@ jobs:
         working-directory: head
         run: |
           npm ci
-          npm run build --workspace=@opentelemetry/browser-instrumentation --workspace=@opentelemetry/browser-sdk
+          npm run build -- --filter=@opentelemetry/browser-instrumentation... --filter=@opentelemetry/browser-sdk...
           node --test scripts/bundle-size-report.test.js
 
       - name: Install and build base
         working-directory: base
         run: |
           npm ci
-          npm run build --workspace=@opentelemetry/browser-instrumentation --workspace=@opentelemetry/browser-sdk
+          npm run build -- --filter=@opentelemetry/browser-instrumentation... --filter=@opentelemetry/browser-sdk...
 
       - name: Measure both revisions with the head tooling
         working-directory: head

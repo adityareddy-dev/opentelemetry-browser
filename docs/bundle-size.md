@@ -16,7 +16,7 @@ To measure locally:
 
 ```sh
 npm ci
-npm run build --workspace=@opentelemetry/browser-instrumentation --workspace=@opentelemetry/browser-sdk
+npm run build -- --filter=@opentelemetry/browser-instrumentation... --filter=@opentelemetry/browser-sdk...
 npm run size
 ```
 

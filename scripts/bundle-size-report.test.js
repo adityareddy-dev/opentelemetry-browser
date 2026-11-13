@@ -4,6 +4,10 @@
  */
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 import { test } from 'node:test';
 import { bundleSizeReport } from './bundle-size-report.js';
 
@@ -59,5 +63,55 @@ test('fails on missing or invalid measurements instead of producing an empty rep
   ]) {
     assert.throws(() => bundleSizeReport(invalid, good));
     assert.throws(() => bundleSizeReport(good, invalid));
+  }
+});
+
+test('measures exports of new packages and supports revisions without them', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'bundle-size-config-'));
+  const loadChecks = () =>
+    JSON.parse(
+      execFileSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          `import checks from ${JSON.stringify(new URL('../.size-limit.js', import.meta.url).href)}; console.log(JSON.stringify(checks));`,
+        ],
+        { env: { ...process.env, BUNDLE_SIZE_ROOT: root }, encoding: 'utf8' },
+      ),
+    );
+  try {
+    for (const directory of ['api', 'instrumentation', 'sdk']) {
+      const packageRoot = resolve(root, 'packages', directory);
+      mkdirSync(packageRoot, { recursive: true });
+      writeFileSync(
+        resolve(packageRoot, 'package.json'),
+        JSON.stringify({
+          name: `@opentelemetry/browser-${directory}`,
+          exports: {
+            '.': { default: './dist/index.js', types: './dist/index.d.ts' },
+            './package.json': './package.json',
+          },
+        }),
+      );
+    }
+    const checks = loadChecks();
+    assert.deepEqual(checks.map(({ name }) => name).sort(), [
+      '@opentelemetry/browser-api [*, brotli]',
+      '@opentelemetry/browser-api [*, gzip]',
+      '@opentelemetry/browser-instrumentation [*, brotli]',
+      '@opentelemetry/browser-instrumentation [*, gzip]',
+      '@opentelemetry/browser-sdk [*, brotli]',
+      '@opentelemetry/browser-sdk [*, gzip]',
+    ]);
+    const api = checks.find(
+      ({ name }) => name === '@opentelemetry/browser-api [*, gzip]',
+    );
+    assert.equal(api.path, resolve(root, 'packages/api/dist/index.js'));
+    assert.equal(api.gzip, true);
+    rmSync(resolve(root, 'packages/api'), { recursive: true });
+    assert.equal(loadChecks().length, 4);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

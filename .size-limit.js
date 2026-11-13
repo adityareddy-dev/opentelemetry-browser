@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,7 +12,7 @@ const root = resolve(
   process.env.BUNDLE_SIZE_ROOT ?? dirname(fileURLToPath(import.meta.url)),
 );
 const checks = [];
-for (const directory of ['instrumentation', 'sdk']) {
+for (const directory of readdirSync(resolve(root, 'packages'))) {
   const packageRoot = resolve(root, 'packages', directory);
   const manifest = JSON.parse(
     readFileSync(resolve(packageRoot, 'package.json'), 'utf8'),
